@@ -5,8 +5,8 @@ import requests
 app = Flask(__name__)
 
 # Configurações para a API do Saber Play
-SABER_PLAY_API_BASE_URL = "https://api.curseduca.com"  # Substitua pela URL real da API
-SABER_PLAY_API_TOKEN = "seu-token-aqui"  # Substitua pelo token da API
+SABER_PLAY_API_BASE_URL = "https://clas.curseduca.pro"  # URL base atualizada
+SABER_PLAY_ACCESS_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjp7ImlkIjoxNSwidXVpZCI6IjdjMGQ0OTk1LWRiZDQtMTFlZS1hYjFmLTEyYzhkMzIzN2I0ZiIsIm5hbWUiOiJSb2RvbGZvIFBhbHVkZXRvIiwiZW1haWwiOiJyb2RvbGZvcGFsdWRldG9AZ21haWwuY29tIiwiaW1hZ2UiOiJodHRwczovL2ZpbGVzLmN1cnNlZHVjYS5jb20vZjQ4ODRlNTUtN2Y1Zi00MGFlLTgxNGEtYTk5YTNjZmVmZWM5LzQ3OWFmMjRjOWYwYjEyNDYyNWU4MzFhYjMxNzljOTQxNGQ1ODY2MTIud2VicCIsInJvbGVzIjpbXSwidGVuYW50cyI6WzEsNl19LCJpYXQiOjE3MzY0NjA1MzcsImV4cCI6MTczOTA1MjUzN30.QDEhjOgzaghZrfhGyL-hta1uXdW_i3gG3iJUUed95tA"  # Token de acesso atualizado
 
 # Rota inicial para verificar se o servidor está funcionando
 @app.route("/")
@@ -57,7 +57,7 @@ def matricular_no_saberplay(email, turma_id):
     Faz a matrícula do aluno no Saber Play usando a API da Curseduca.
     """
     headers = {
-        "Authorization": f"Bearer {SABER_PLAY_API_TOKEN}",
+        "Authorization": f"Bearer {SABER_PLAY_ACCESS_TOKEN}",
         "Content-Type": "application/json"
     }
     payload = {
@@ -72,6 +72,8 @@ def matricular_no_saberplay(email, turma_id):
         response.raise_for_status()  # Lança erro se o status não for 2xx
         return response.json()  # Retorna a resposta da API
     except requests.exceptions.RequestException as e:
+        print("Erro ao chamar a API do Saber Play:", e)
+        print("Resposta da API:", getattr(e.response, "text", "Sem resposta"))
         return {"error": str(e)}
 
 # Executar o aplicativo no servidor
