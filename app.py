@@ -20,23 +20,31 @@ def receber_webhook():
     """
     Recebe dados do SpotForm e processa a matrícula no LMS da Curseduca.
     """
-    data = request.get_json()
-    if not data:
-        return jsonify({"error": "Corpo da requisição vazio"}), 400
+    try:
+        data = request.get_json()
+        print("Dados recebidos:", data)  # Loga os dados recebidos
 
-    nome = data.get("nome")
-    email = data.get("email")
+        if not data:
+            return jsonify({"error": "Corpo da requisição vazio"}), 400
 
-    if not nome or not email:
-        return jsonify({"error": "Nome ou email não fornecidos"}), 400
+        nome = data.get("nome")
+        email = data.get("email")
 
-    # Realiza a matrícula no LMS da Curseduca
-    matricula = matricular_no_lms(email)
+        if not nome or not email:
+            print("Erro: Campos ausentes (nome ou email).")
+            return jsonify({"error": "Nome ou email não fornecidos"}), 400
 
-    if matricula.get("status") == "success":
-        return jsonify({"message": "Matrícula realizada com sucesso!"}), 200
-    else:
-        return jsonify({"error": "Falha ao realizar matrícula"}), 500
+        # Realiza a matrícula no LMS da Curseduca
+        matricula = matricular_no_lms(email)
+
+        if matricula.get("status") == "success":
+            return jsonify({"message": "Matrícula realizada com sucesso!"}), 200
+        else:
+            print("Erro ao realizar matrícula:", matricula.get("message"))
+            return jsonify({"error": "Falha ao realizar matrícula"}), 500
+    except Exception as e:
+        print("Erro no processamento do webhook:", str(e))
+        return jsonify({"error": "Erro interno no servidor"}), 500
 
 def matricular_no_lms(email):
     """
@@ -55,7 +63,10 @@ def matricular_no_lms(email):
 
     try:
         response = requests.post(url, json=payload, headers=headers)
-        response.raise_for_status()
+        print("Status Code da API:", response.status_code)  # Loga o status da resposta
+        print("Resposta da API:", response.text)  # Loga o corpo da resposta
+
+        response.raise_for_status()  # Lança erro se o status não for 2xx
         return {"status": "success", "data": response.json()}
     except requests.exceptions.RequestException as e:
         print(f"Erro ao integrar com a Curseduca: {e}")
