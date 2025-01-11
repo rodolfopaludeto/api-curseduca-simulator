@@ -1,34 +1,24 @@
 from flask import Flask, request, jsonify
-from urllib.parse import quote as url_quote  # Substituição do url_quote
 import requests
 
 app = Flask(__name__)
 
-# Configurações para a API do Saber Play
-SABER_PLAY_API_BASE_URL = "https://clas.curseduca.pro"  # URL base
-SABER_PLAY_API_KEY = "c0e968b5ed5d4c85accd7443ca3d105b07f1ce0d"  # Chave API atualizada
+# Configurações da API da Curseduca
+CURSEDUCA_BASE_URL = "https://prof.curseduca.pro"
+AUTH_TOKEN = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjp7ImlkIjoxNSwidXVpZCI6IjdjMGQ0OTk1LWRiZDQtMTFlZS1hYjFmLTEyYzhkMzIzN2I0ZiIsIm5hbWUiOiJSb2RvbGZvIFBhbHVkZXRvIiwiZW1haWwiOiJyb2RvbGZvcGFsdWRldG9AZ21haWwuY29tIiwiaW1hZ2UiOiJodHRwczovL2ZpbGVzLmN1cnNlZHVjYS5jb20vZjQ4ODRlNTUtN2Y1Zi00MGFlLTgxNGEtYTk5YTNjZmVmZWM5LzQ3OWFmMjRjOWYwYjEyNDYyNWU4MzFhYjMxNzljOTQxNGQ1ODY2MTIud2VicCIsInJvbGVzIjpbXSwidGVuYW50cyI6WzEsNl19LCJpYXQiOjE3MzY0NjA1MzcsImV4cCI6MTczOTA1MjUzN30.QDEhjOgzaghZrfhGyL-hta1uXdW_i3gG3iJUUed95tA"  # Substitua pelo token JWT válido
+API_KEY = "c0e968b5ed5d4c85accd7443ca3d105b07f1ce0d"  # Substitua pela sua API Key
+TURMA_ID = 18  # ID da turma "Clientes Templum"
 
-# Rota inicial para verificar se o servidor está funcionando
-@app.route("/")
+# Endpoint para verificar se o webhook está ativo
+@app.route("/", methods=["GET"])
 def home():
-    return jsonify({"message": "API está funcionando!"})
+    return jsonify({"message": "Webhook ativo e funcionando!"})
 
-# Exemplo de rota que utiliza url_quote
-@app.route("/encode", methods=["GET"])
-def encode_url():
-    """
-    Rota que recebe um parâmetro 'text' e retorna o texto codificado em URL.
-    Exemplo: /encode?text=Olá Mundo!
-    """
-    text = request.args.get("text", "")
-    encoded_text = url_quote(text)  # Codifica o texto usando urllib.parse.quote
-    return jsonify({"encoded_text": encoded_text})
-
-# Rota para receber dados do SPOTFORM e matricular no Saber Play
+# Endpoint que recebe o webhook do SpotForm
 @app.route("/webhook", methods=["POST"])
-def webhook():
+def receber_webhook():
     """
-    Endpoint para receber dados do SPOTFORM via webhook.
+    Recebe dados do SpotForm e processa a matrícula no LMS da Curseduca.
     """
     data = request.get_json()
     if not data:
@@ -40,60 +30,36 @@ def webhook():
     if not nome or not email:
         return jsonify({"error": "Nome ou email não fornecidos"}), 400
 
-    # Exemplo de ID da turma para matrícula
-    turma_id = 123
-
-    # Chamada à função para matricular no Saber Play
-    matricula = matricular_no_saberplay(email, turma_id)
+    # Realiza a matrícula no LMS da Curseduca
+    matricula = matricular_no_lms(email)
 
     if matricula.get("status") == "success":
-        return jsonify({"message": "Matrícula enviada ao Saber Play com sucesso!"}), 200
+        return jsonify({"message": "Matrícula realizada com sucesso!"}), 200
     else:
-        return jsonify({"error": "Falha ao enviar matrícula ao Saber Play", "details": matricula}), 500
+        return jsonify({"error": "Falha ao realizar matrícula"}), 500
 
-# Função para integrar com o Saber Play
-def matricular_no_saberplay(email, turma_id):
+def matricular_no_lms(email):
     """
-    Faz a matrícula do aluno no Saber Play usando a API da Curseduca.
+    Realiza a matrícula do aluno no LMS da Curseduca.
     """
+    url = f"{CURSEDUCA_BASE_URL}/enrollments"
     headers = {
-        "api_key": SABER_PLAY_API_KEY,
+        "Authorization": AUTH_TOKEN,
+        "api_key": API_KEY,
         "Content-Type": "application/json"
     }
     payload = {
-        "member": {
-            "email": email
-        },
-        "contentId": turma_id
+        "member": {"email": email},
+        "contentId": TURMA_ID
     }
 
     try:
-        response = requests.post(f"{SABER_PLAY_API_BASE_URL}/enrollments", json=payload, headers=headers)
-        response.raise_for_status()  # Lança erro se o status não for 2xx
-        return response.json()  # Retorna a resposta da API
-    except requests.exceptions.RequestException as e:
-        print("Erro ao chamar a API do Saber Play:", e)
-        print("Resposta da API:", getattr(e.response, "text", "Sem resposta"))
-        return {"error": str(e)}
-
-# Rota para listar turmas no Saber Play
-@app.route("/turmas", methods=["GET"])
-def listar_turmas():
-    """
-    Lista todas as turmas disponíveis no Saber Play.
-    """
-    headers = {
-        "api_key": SABER_PLAY_API_KEY,
-        "Content-Type": "application/json"
-    }
-
-    try:
-        response = requests.get(f"{SABER_PLAY_API_BASE_URL}/groups", headers=headers)
+        response = requests.post(url, json=payload, headers=headers)
         response.raise_for_status()
-        return jsonify(response.json())
+        return {"status": "success", "data": response.json()}
     except requests.exceptions.RequestException as e:
-        print("Erro ao listar turmas no Saber Play:", e)
-        return jsonify({"error": "Falha ao listar turmas", "details": str(e)}), 500
+        print(f"Erro ao integrar com a Curseduca: {e}")
+        return {"status": "error", "message": str(e)}
 
 # Executar o aplicativo no servidor
 if __name__ == "__main__":
