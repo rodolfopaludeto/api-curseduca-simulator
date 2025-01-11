@@ -5,8 +5,8 @@ import requests
 app = Flask(__name__)
 
 # Configurações para a API do Saber Play
-SABER_PLAY_API_BASE_URL = "https://clas.curseduca.pro"  # URL base atualizada
-SABER_PLAY_ACCESS_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjp7ImlkIjoxNSwidXVpZCI6IjdjMGQ0OTk1LWRiZDQtMTFlZS1hYjFmLTEyYzhkMzIzN2I0ZiIsIm5hbWUiOiJSb2RvbGZvIFBhbHVkZXRvIiwiZW1haWwiOiJyb2RvbGZvcGFsdWRldG9AZ21haWwuY29tIiwiaW1hZ2UiOiJodHRwczovL2ZpbGVzLmN1cnNlZHVjYS5jb20vZjQ4ODRlNTUtN2Y1Zi00MGFlLTgxNGEtYTk5YTNjZmVmZWM5LzQ3OWFmMjRjOWYwYjEyNDYyNWU4MzFhYjMxNzljOTQxNGQ1ODY2MTIud2VicCIsInJvbGVzIjpbXSwidGVuYW50cyI6WzEsNl19LCJpYXQiOjE3MzY0NjA1MzcsImV4cCI6MTczOTA1MjUzN30.QDEhjOgzaghZrfhGyL-hta1uXdW_i3gG3iJUUed95tA"  # Token de acesso atualizado
+SABER_PLAY_API_BASE_URL = "https://clas.curseduca.pro"  # URL base
+SABER_PLAY_API_KEY = "c0e968b5ed5d4c85accd7443ca3d105b07f1ce0d"  # Chave API atualizada
 
 # Rota inicial para verificar se o servidor está funcionando
 @app.route("/")
@@ -41,7 +41,7 @@ def webhook():
         return jsonify({"error": "Nome ou email não fornecidos"}), 400
 
     # Exemplo de ID da turma para matrícula
-    turma_id = 123  # Certifique-se de atualizar este valor com o ID correto
+    turma_id = 123
 
     # Chamada à função para matricular no Saber Play
     matricula = matricular_no_saberplay(email, turma_id)
@@ -49,7 +49,7 @@ def webhook():
     if matricula.get("status") == "success":
         return jsonify({"message": "Matrícula enviada ao Saber Play com sucesso!"}), 200
     else:
-        return jsonify({"error": "Falha ao enviar matrícula ao Saber Play"}), 500
+        return jsonify({"error": "Falha ao enviar matrícula ao Saber Play", "details": matricula}), 500
 
 # Função para integrar com o Saber Play
 def matricular_no_saberplay(email, turma_id):
@@ -57,7 +57,7 @@ def matricular_no_saberplay(email, turma_id):
     Faz a matrícula do aluno no Saber Play usando a API da Curseduca.
     """
     headers = {
-        "Authorization": f"Bearer {SABER_PLAY_ACCESS_TOKEN}",
+        "api_key": SABER_PLAY_API_KEY,
         "Content-Type": "application/json"
     }
     payload = {
@@ -75,6 +75,25 @@ def matricular_no_saberplay(email, turma_id):
         print("Erro ao chamar a API do Saber Play:", e)
         print("Resposta da API:", getattr(e.response, "text", "Sem resposta"))
         return {"error": str(e)}
+
+# Rota para listar turmas no Saber Play
+@app.route("/turmas", methods=["GET"])
+def listar_turmas():
+    """
+    Lista todas as turmas disponíveis no Saber Play.
+    """
+    headers = {
+        "api_key": SABER_PLAY_API_KEY,
+        "Content-Type": "application/json"
+    }
+
+    try:
+        response = requests.get(f"{SABER_PLAY_API_BASE_URL}/groups", headers=headers)
+        response.raise_for_status()
+        return jsonify(response.json())
+    except requests.exceptions.RequestException as e:
+        print("Erro ao listar turmas no Saber Play:", e)
+        return jsonify({"error": "Falha ao listar turmas", "details": str(e)}), 500
 
 # Executar o aplicativo no servidor
 if __name__ == "__main__":
