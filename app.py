@@ -59,18 +59,18 @@ def verificar_usuario(email):
     """
     Verifica se o usuário já existe no LMS da Curseduca.
     """
-    url = f"{MEMBER_API_BASE_URL}/members"
+    url = f"{MEMBER_API_BASE_URL}/members/by?email={email}"
     headers = {
         "Authorization": AUTH_TOKEN,
         "api_key": API_KEY
     }
-    params = {"email": email}
 
     try:
-        response = requests.get(url, headers=headers, params=params)
+        response = requests.get(url, headers=headers)
         response.raise_for_status()
-        users = response.json().get("data", [])
-        return users[0] if users else None
+        user = response.json()
+        print(f"Usuário encontrado: {user}")
+        return user  # Retorna os detalhes do usuário encontrado
     except requests.exceptions.RequestException as e:
         print(f"Erro ao verificar usuário: {e}")
         return None
@@ -92,6 +92,8 @@ def criar_usuario(nome, email):
 
     try:
         response = requests.post(url, json=payload, headers=headers)
+        print(f"Status Code ao criar usuário: {response.status_code}")
+        print(f"Resposta ao criar usuário: {response.text}")
         response.raise_for_status()
         return response.json()
     except requests.exceptions.RequestException as e:
