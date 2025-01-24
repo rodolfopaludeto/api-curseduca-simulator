@@ -6,8 +6,8 @@ app = Flask(__name__)
 # Configurações das APIs da Curseduca
 MEMBERS_API_URL = "https://prof.curseduca.pro"
 GROUPS_API_URL = "https://clas.curseduca.pro"
-AUTH_TOKEN = "Bearer <SEU_ACCESS_TOKEN>"  # Substitua pelo token atualizado
-API_KEY = "<SUA_API_KEY>"  # Substitua pela chave de API
+AUTH_TOKEN = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjp7ImlkIjoxNSwidXVpZCI6IjdjMGQ0OTk1LWRiZDQtMTFlZS1hYjFmLTEyYzhkMzIzN2I0ZiIsIm5hbWUiOiJSb2RvbGZvIFBhbHVkZXRvIiwiZW1haWwiOiJyb2RvbGZvcGFsdWRldG9AZ21haWwuY29tIiwiaW1hZ2UiOiJodHRwczovL2ZpbGVzLmN1cnNlZHVjYS5jb20vZjQ4ODRlNTUtN2Y1Zi00MGFlLTgxNGEtYTk5YTNjZmVmZWM5LzQ3OWFmMjRjOWYwYjEyNDYyNWU4MzFhYjMxNzljOTQxNGQ1ODY2MTIud2VicCIsInJvbGVzIjpbIkFETUlOIl0sInRlbmFudHMiOlsxLDZdfSwiaWF0IjoxNzM3MDM2OTU1LCJleHAiOjE3Mzk2Mjg5NTV9.jKleNAoBfxrc58Pb0aCxhO8jnEW6vDhuoF7FE0ICRUg"  # Substitua pelo token atualizado
+API_KEY = "c0e968b5ed5d4c85accd7443ca3d105b07f1ce0d"  # Substitua pela chave de API
 TURMA_ID = 18  # ID da turma "Clientes Templum"
 
 @app.route("/", methods=["GET"])
