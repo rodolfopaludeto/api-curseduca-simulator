@@ -4,10 +4,9 @@ import requests
 app = Flask(__name__)
 
 # Configurações das APIs da Curseduca
-MEMBERS_API_URL = "https://prof.curseduca.pro"
-GROUPS_API_URL = "https://clas.curseduca.pro"
-AUTH_TOKEN = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjp7ImlkIjoxNSwidXVpZCI6IjdjMGQ0OTk1LWRiZDQtMTFlZS1hYjFmLTEyYzhkMzIzN2I0ZiIsIm5hbWUiOiJSb2RvbGZvIFBhbHVkZXRvIiwiZW1haWwiOiJyb2RvbGZvcGFsdWRldG9AZ21haWwuY29tIiwiaW1hZ2UiOiJodHRwczovL2ZpbGVzLmN1cnNlZHVjYS5jb20vZjQ4ODRlNTUtN2Y1Zi00MGFlLTgxNGEtYTk5YTNjZmVmZWM5LzQ3OWFmMjRjOWYwYjEyNDYyNWU4MzFhYjMxNzljOTQxNGQ1ODY2MTIud2VicCIsInJvbGVzIjpbIkFETUlOIl0sInRlbmFudHMiOlsxLDZdfSwiaWF0IjoxNzM3MDM2OTU1LCJleHAiOjE3Mzk2Mjg5NTV9.jKleNAoBfxrc58Pb0aCxhO8jnEW6vDhuoF7FE0ICRUg"  # Substitua pelo token atualizado
-API_KEY = "c0e968b5ed5d4c85accd7443ca3d105b07f1ce0d"  # Substitua pela chave de API
+BASE_URL = "https://prof.curseduca.pro"
+AUTH_TOKEN = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjp7ImlkIjoxNSwidXVpZCI6IjdjMGQ0OTk1LWRiZDQtMTFlZS1hYjFmLTEyYzhkMzIzN2I0ZiIsIm5hbWUiOiJSb2RvbGZvIFBhbHVkZXRvIiwiZW1haWwiOiJyb2RvbGZvcGFsdWRldG9AZ21haWwuY29tIiwiaW1hZ2UiOiJodHRwczovL2ZpbGVzLmN1cnNlZHVjYS5jb20vZjQ4ODRlNTUtN2Y1Zi00MGFlLTgxNGEtYTk5YTNjZmVmZWM5LzQ3OWFmMjRjOWYwYjEyNDYyNWU4MzFhYjMxNzljOTQxNGQ1ODY2MTIud2VicCIsInJvbGVzIjpbIkFETUlOIl0sInRlbmFudHMiOlsxLDZdfSwiaWF0IjoxNzM3MDM2OTU1LCJleHAiOjE3Mzk2Mjg5NTV9.jKleNAoBfxrc58Pb0aCxhO8jnEW6vDhuoF7FE0ICRUg"  # Token atualizado
+API_KEY = "c0e968b5ed5d4c85accd7443ca3d105b07f1ce0d"  # API Key fornecida
 TURMA_ID = 18  # ID da turma "Clientes Templum"
 
 # Endpoint para verificar se o webhook está ativo
@@ -63,7 +62,7 @@ def verificar_usuario(email):
     """
     Verifica se o usuário já existe no LMS da Curseduca.
     """
-    url = f"{CURSEDUCA_BASE_URL_MEMBERS}/members/by?email={email}"
+    url = f"{BASE_URL}/members/by?email={email}"
     headers = {
         "Authorization": AUTH_TOKEN,
         "api_key": API_KEY
@@ -87,7 +86,7 @@ def criar_usuario(nome, email):
     """
     Cria um novo usuário no LMS da Curseduca.
     """
-    url = f"{CURSEDUCA_BASE_URL_MEMBERS}/register"
+    url = f"{BASE_URL}/register"
     headers = {
         "Authorization": AUTH_TOKEN,
         "api_key": API_KEY,
@@ -129,7 +128,7 @@ def matricular_usuario_na_turma(membro_id):
     """
     Matricula o usuário em uma turma específica.
     """
-    url = f"{CURSEDUCA_BASE_URL_GROUPS}/members/groups"
+    url = f"{BASE_URL}/members/groups"
     headers = {
         "Authorization": AUTH_TOKEN,
         "api_key": API_KEY,
@@ -137,7 +136,8 @@ def matricular_usuario_na_turma(membro_id):
     }
     payload = {
         "member": {
-            "id": membro_id
+            "id": membro_id,
+            "role": "STUDENT"
         },
         "group": {
             "id": TURMA_ID
