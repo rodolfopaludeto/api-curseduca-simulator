@@ -3,124 +3,132 @@ import requests
 
 app = Flask(__name__)
 
-# Configurações da API da Curseduca
-CURSEDUCA_MEMBERS_URL = "https://prof.curseduca.pro"
-CURSEDUCA_CONTENTS_URL = "https://clas.curseduca.pro"
-API_KEY = "c0e968b5ed5d4c85accd7443ca3d105b07f1ce0d"
-AUTH_TOKEN = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjp7ImlkIjoxNSwidXVpZCI6IjdjMGQ0OTk1LWRiZDQtMTFlZS1hYjFmLTEyYzhkMzIzN2I0ZiIsIm5hbWUiOiJSb2RvbGZvIFBhbHVkZXRvIiwiZW1haWwiOiJyb2RvbGZvcGFsdWRldG9AZ21haWwuY29tIiwiaW1hZ2UiOiJodHRwczovL2ZpbGVzLmN1cnNlZHVjYS5jb20vZjQ4ODRlNTUtN2Y1Zi00MGFlLTgxNGEtYTk5YTNjZmVmZWM5LzQ3OWFmMjRjOWYwYjEyNDYyNWU4MzFhYjMxNzljOTQxNGQ1ODY2MTIud2VicCIsInJvbGVzIjpbXSwidGVuYW50cyI6WzEsNl19LCJpYXQiOjE3MzY4ODExMDksImV4cCI6MTczOTQ3MzEwOX0.GP4kRsq-piaaosvn9zPfEhI76ddce-kRtlNbb3dy218"
-REFRESH_TOKEN = "9fe0c1de-32d2-483d-ba5d-19bd66ae7f97"
+# Configurações das APIs da Curseduca
+MEMBERS_API_URL = "https://prof.curseduca.pro"
+GROUPS_API_URL = "https://clas.curseduca.pro"
+AUTH_TOKEN = "Bearer <SEU_ACCESS_TOKEN>"  # Substitua pelo token atualizado
+API_KEY = "<SUA_API_KEY>"  # Substitua pela chave de API
 TURMA_ID = 18  # ID da turma "Clientes Templum"
 
-# Função para renovar o token de acesso
-def renovar_token():
-    url = f"{CURSEDUCA_MEMBERS_URL}/refresh"
-    headers = {
-        "Content-Type": "application/json",
-        "api_key": API_KEY
-    }
-    payload = {
-        "refreshToken": REFRESH_TOKEN
-    }
-
-    try:
-        response = requests.post(url, json=payload, headers=headers)
-        response.raise_for_status()
-        novo_token = response.json().get("accessToken")
-        return f"Bearer {novo_token}"
-    except requests.exceptions.RequestException as e:
-        print(f"Erro ao renovar token: {e}")
-        return None
-
-# Middleware para verificar e renovar o token antes das requisições
-def verificar_ou_renovar_token():
-    global AUTH_TOKEN
-    # Aqui você pode implementar uma lógica para verificar se o token expirou
-    # ou simplesmente renovar o token sempre que esta função for chamada
-    novo_token = renovar_token()
-    if novo_token:
-        AUTH_TOKEN = novo_token
-
-# Endpoint para verificar se o webhook está ativo
 @app.route("/", methods=["GET"])
 def home():
     return jsonify({"message": "Webhook ativo e funcionando!"})
 
-# Endpoint que recebe o webhook do SpotForm
 @app.route("/webhook", methods=["POST"])
 def receber_webhook():
-    verificar_ou_renovar_token()
-
+    """
+    Recebe dados do SpotForm e processa a matrícula no LMS da Curseduca.
+    """
     data = request.get_json()
     if not data:
         return jsonify({"error": "Corpo da requisição vazio"}), 400
 
     nome = data.get("nome")
     email = data.get("email")
-
     if not nome or not email:
         return jsonify({"error": "Nome ou email não fornecidos"}), 400
 
-    # Verifica ou cria o usuário
-    usuario = verificar_ou_criar_usuario(email, nome)
-    if not usuario:
-        return jsonify({"error": "Falha ao criar ou encontrar usuário"}), 500
+    # Verificar se o usuário já existe
+    membro = verificar_usuario(email)
+    if not membro:
+        # Criar novo usuário
+        membro = criar_usuario(nome, email)
+        if not membro:
+            return jsonify({"error": "Falha ao criar usuário"}), 500
 
-    # Matricula o usuário na turma
-    matricula = matricular_no_lms(email)
-    if matricula.get("status") == "success":
-        return jsonify({"message": "Matrícula realizada com sucesso!"}), 200
+    # Matricular usuário na turma
+    matricula = matricular_usuario_na_turma(membro["id"], membro["uuid"])
+    if matricula:
+        return jsonify({"message": "Usuário matriculado com sucesso!"}), 200
     else:
-        return jsonify({"error": "Falha ao realizar matrícula"}), 500
+        return jsonify({"error": "Falha ao matricular usuário"}), 500
 
-# Função para verificar ou criar usuário no LMS
-def verificar_ou_criar_usuario(email, nome):
-    url = f"{CURSEDUCA_MEMBERS_URL}/members/by?email={email}"
+def verificar_usuario(email):
+    """
+    Verifica se o usuário já existe no Saber Play.
+    """
+    url = f"{MEMBERS_API_URL}/members/by?email={email}"
     headers = {
         "Authorization": AUTH_TOKEN,
         "api_key": API_KEY
     }
-
     try:
-        # Tenta buscar o usuário
         response = requests.get(url, headers=headers)
         if response.status_code == 200:
             return response.json()
-
-        # Se o usuário não existe, cria um novo
-        url = f"{CURSEDUCA_MEMBERS_URL}/members"
-        payload = {
-            "email": email,
-            "name": nome
-        }
-        response = requests.post(url, json=payload, headers=headers)
-        response.raise_for_status()
-        return response.json()
-
+        else:
+            return None
     except requests.exceptions.RequestException as e:
-        print(f"Erro ao verificar ou criar usuário: {e}")
+        print(f"Erro ao verificar usuário: {e}")
         return None
 
-# Função para matricular usuário no LMS
-def matricular_no_lms(email):
-    url = f"{CURSEDUCA_CONTENTS_URL}/enrollments"
+def criar_usuario(nome, email):
+    """
+    Cria um novo usuário no Saber Play.
+    """
+    url = f"{MEMBERS_API_URL}/register"
     headers = {
         "Authorization": AUTH_TOKEN,
         "api_key": API_KEY,
         "Content-Type": "application/json"
     }
     payload = {
-        "member": {"email": email},
-        "contentId": TURMA_ID
+        "name": nome,
+        "email": email,
+        "password": "sabergestao",
+        "document": "12345678909",  # CPF fictício
+        "phones": {"mobile": "(43) 99999-9999"},
+        "sendConfirmationEmail": True,
+        "birthDate": "2005-01-01T00:00:00Z",
+        "address": {
+            "zipCode": "12345678",
+            "street": "Rua Exemplo",
+            "number": "123",
+            "complement": "Apto 101",
+            "city": "Londrina",
+            "state": "PR"
+        }
     }
-
     try:
         response = requests.post(url, json=payload, headers=headers)
-        response.raise_for_status()
-        return {"status": "success", "data": response.json()}
+        if response.status_code == 201:
+            return response.json()
+        else:
+            print(f"Erro ao criar usuário: {response.text}")
+            return None
     except requests.exceptions.RequestException as e:
-        print(f"Erro ao integrar com a Curseduca: {e}")
-        return {"status": "error", "message": str(e)}
+        print(f"Erro ao criar usuário: {e}")
+        return None
 
-# Executar o aplicativo no servidor
+def matricular_usuario_na_turma(member_id, member_uuid):
+    """
+    Matricula o usuário na turma configurada.
+    """
+    url = f"{MEMBERS_API_URL}/members/groups"
+    headers = {
+        "Authorization": AUTH_TOKEN,
+        "api_key": API_KEY,
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "member": {
+            "id": member_id,
+            "uuid": member_uuid,
+            "role": "STUDENT"
+        },
+        "groups": [str(TURMA_ID)],
+        "customExpirationDate": "2025-12-31T23:59:59Z"
+    }
+    try:
+        response = requests.post(url, json=payload, headers=headers)
+        if response.status_code in [200, 201]:
+            return True
+        else:
+            print(f"Erro ao matricular usuário: {response.text}")
+            return False
+    except requests.exceptions.RequestException as e:
+        print(f"Erro ao matricular usuário: {e}")
+        return False
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
