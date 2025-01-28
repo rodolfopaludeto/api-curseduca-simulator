@@ -1,14 +1,12 @@
 from flask import Flask, request, jsonify
-from flask_cors import CORS
 import requests
 
 app = Flask(__name__)
-CORS(app)  # Habilita CORS para evitar erros de requisição externa
 
-# Configurações da API da Curseduca
+# Configurações das APIs da Curseduca
 BASE_URL = "https://prof.curseduca.pro"
-AUTH_TOKEN = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjp7ImlkIjoxNSwidXVpZCI6IjdjMGQ0OTk1LWRiZDQtMTFlZS1hYjFmLTEyYzhkMzIzN2I0ZiIsIm5hbWUiOiJSb2RvbGZvIFBhbHVkZXRvIiwiZW1haWwiOiJyb2RvbGZvcGFsdWRldG9AZ21haWwuY29tIiwiaW1hZ2UiOiJodHRwczovL2ZpbGVzLmN1cnNlZHVjYS5jb20vZjQ4ODRlNTUtN2Y1Zi00MGFlLTgxNGEtYTk5YTNjZmVmZWM5LzQ3OWFmMjRjOWYwYjEyNDYyNWU4MzFhYjMxNzljOTQxNGQ1ODY2MTIud2VicCIsInJvbGVzIjpbIkFETUlOIl0sInRlbmFudHMiOlsxLDZdfSwiaWF0IjoxNzM3MDM2OTU1LCJleHAiOjE3Mzk2Mjg5NTV9.jKleNAoBfxrc58Pb0aCxhO8jnEW6vDhuoF7FE0ICRUg"  # Token atualizado
-API_KEY = "c0e968b5ed5d4c85accd7443ca3d105b07f1ce0d"  # API Key fornecida
+AUTH_TOKEN = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+API_KEY = "c0e968b5ed5d4c85accd7443ca3d105b07f1ce0d"
 TURMA_ID = 18  # ID da turma "Clientes Templum"
 
 # Endpoint para verificar se o webhook está ativo
@@ -19,17 +17,15 @@ def home():
 # Endpoint que recebe o webhook do SpotForm
 @app.route("/webhook", methods=["POST"])
 def receber_webhook():
-    """
-    Recebe dados do SpotForm e processa a matrícula no LMS da Curseduca.
-    """
     try:
         data = request.get_json()
         if not data:
             return jsonify({"error": "Corpo da requisição vazio"}), 400
 
-        # Ajuste para diferentes estruturas de entrada do SpotForm
-        nome = data.get("nome") or data.get("data", {}).get("nome")
-        email = data.get("email") or data.get("data", {}).get("email")
+        # 🔍 Verifica onde estão os dados e os extrai corretamente
+        content = data.get("content", {})
+        nome = content.get("Campo de Texto")  # Nome do campo no SpotForm
+        email = content.get("Campo de E-mail")  # Nome do campo no SpotForm
 
         if not nome or not email:
             return jsonify({"error": "Nome ou email não fornecidos"}), 400
@@ -61,102 +57,35 @@ def receber_webhook():
         print("Erro inesperado no webhook:", str(e))
         return jsonify({"error": "Erro interno no servidor"}), 500
 
+# Funções para verificar usuário, criar usuário e matricular
 def verificar_usuario(email):
-    """
-    Verifica se o usuário já existe no LMS da Curseduca.
-    """
     url = f"{BASE_URL}/members/by?email={email}"
-    headers = {
-        "Authorization": AUTH_TOKEN,
-        "api_key": API_KEY
-    }
-
-    try:
-        response = requests.get(url, headers=headers)
-        if response.status_code == 200:
-            return response.json()  # Retorna os dados do membro
-        elif response.status_code == 404:
-            print(f"Usuário com email {email} não encontrado.")
-            return None
-        else:
-            print(f"Erro ao verificar usuário: {response.text}")
-            return None
-    except requests.exceptions.RequestException as e:
-        print(f"Erro na requisição ao verificar usuário: {e}")
-        return None
+    headers = {"Authorization": AUTH_TOKEN, "api_key": API_KEY}
+    response = requests.get(url, headers=headers)
+    return response.json() if response.status_code == 200 else None
 
 def criar_usuario(nome, email):
-    """
-    Cria um novo usuário no LMS da Curseduca.
-    """
     url = f"{BASE_URL}/register"
-    headers = {
-        "Authorization": AUTH_TOKEN,
-        "api_key": API_KEY,
-        "Content-Type": "application/json"
-    }
+    headers = {"Authorization": AUTH_TOKEN, "api_key": API_KEY, "Content-Type": "application/json"}
     payload = {
         "name": nome,
         "email": email,
         "password": "sabergestao",
         "document": "12345678909",
-        "phones": {
-            "mobile": "(43) 99999-9999",
-            "home": "(43) 3322-4455"
-        },
+        "phones": {"mobile": "(43) 99999-9999", "home": "(43) 3322-4455"},
         "sendConfirmationEmail": True,
         "birthDate": "2000-01-01T00:00:00Z",
-        "address": {
-            "zipCode": "86010-000",
-            "street": "Rua Exemplo",
-            "number": "123",
-            "complement": "Apto 101",
-            "city": "Londrina",
-            "state": "PR"
-        }
+        "address": {"zipCode": "86010-000", "street": "Rua Exemplo", "number": "123", "complement": "Apto 101", "city": "Londrina", "state": "PR"}
     }
-
-    try:
-        response = requests.post(url, json=payload, headers=headers)
-        if response.status_code == 201:
-            return response.json()["member"]  # Retorna os dados do membro criado
-        else:
-            print(f"Erro ao criar usuário: {response.text}")
-            return None
-    except requests.exceptions.RequestException as e:
-        print(f"Erro na requisição ao criar usuário: {e}")
-        return None
+    response = requests.post(url, json=payload, headers=headers)
+    return response.json()["member"] if response.status_code == 201 else None
 
 def matricular_usuario_na_turma(membro_id):
-    """
-    Matricula o usuário em uma turma específica.
-    """
     url = f"{BASE_URL}/members/groups"
-    headers = {
-        "Authorization": AUTH_TOKEN,
-        "api_key": API_KEY,
-        "Content-Type": "application/json"
-    }
-    payload = {
-        "member": {
-            "id": membro_id,
-            "role": "STUDENT"
-        },
-        "group": {
-            "id": TURMA_ID
-        }
-    }
-
-    try:
-        response = requests.post(url, json=payload, headers=headers)
-        if response.status_code in [200, 201]:
-            return {"status": "success"}
-        else:
-            print(f"Erro ao matricular usuário: {response.text}")
-            return {"status": "error", "message": response.text}
-    except requests.exceptions.RequestException as e:
-        print(f"Erro na requisição ao matricular usuário: {e}")
-        return {"status": "error", "message": str(e)}
+    headers = {"Authorization": AUTH_TOKEN, "api_key": API_KEY, "Content-Type": "application/json"}
+    payload = {"member": {"id": membro_id, "role": "STUDENT"}, "group": {"id": TURMA_ID}}
+    response = requests.post(url, json=payload, headers=headers)
+    return {"status": "success"} if response.status_code in [200, 201] else {"status": "error", "message": response.text}
 
 # Executar o aplicativo no servidor
 if __name__ == "__main__":
