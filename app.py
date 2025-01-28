@@ -1,9 +1,11 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 import requests
 
 app = Flask(__name__)
+CORS(app)  # Habilita CORS para evitar erros de requisição externa
 
-# Configurações das APIs da Curseduca
+# Configurações da API da Curseduca
 BASE_URL = "https://prof.curseduca.pro"
 AUTH_TOKEN = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjp7ImlkIjoxNSwidXVpZCI6IjdjMGQ0OTk1LWRiZDQtMTFlZS1hYjFmLTEyYzhkMzIzN2I0ZiIsIm5hbWUiOiJSb2RvbGZvIFBhbHVkZXRvIiwiZW1haWwiOiJyb2RvbGZvcGFsdWRldG9AZ21haWwuY29tIiwiaW1hZ2UiOiJodHRwczovL2ZpbGVzLmN1cnNlZHVjYS5jb20vZjQ4ODRlNTUtN2Y1Zi00MGFlLTgxNGEtYTk5YTNjZmVmZWM5LzQ3OWFmMjRjOWYwYjEyNDYyNWU4MzFhYjMxNzljOTQxNGQ1ODY2MTIud2VicCIsInJvbGVzIjpbIkFETUlOIl0sInRlbmFudHMiOlsxLDZdfSwiaWF0IjoxNzM3MDM2OTU1LCJleHAiOjE3Mzk2Mjg5NTV9.jKleNAoBfxrc58Pb0aCxhO8jnEW6vDhuoF7FE0ICRUg"  # Token atualizado
 API_KEY = "c0e968b5ed5d4c85accd7443ca3d105b07f1ce0d"  # API Key fornecida
@@ -25,8 +27,9 @@ def receber_webhook():
         if not data:
             return jsonify({"error": "Corpo da requisição vazio"}), 400
 
-        nome = data.get("nome")
-        email = data.get("email")
+        # Ajuste para diferentes estruturas de entrada do SpotForm
+        nome = data.get("nome") or data.get("data", {}).get("nome")
+        email = data.get("email") or data.get("data", {}).get("email")
 
         if not nome or not email:
             return jsonify({"error": "Nome ou email não fornecidos"}), 400
